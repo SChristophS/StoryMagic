@@ -1,0 +1,52 @@
+<!-- templates/pdf_template.html -->
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ story.title }}</title>
+    <style>
+        @page { size: A4; margin: 20mm; }
+        body { font-family: Arial, sans-serif; }
+        .page {
+            page-break-after: always;
+            position: relative;
+            width: 210mm;
+            height: 297mm;
+        }
+        .text-element {
+            position: absolute;
+        }
+        .image-element {
+            position: absolute;
+        }
+    </style>
+</head>
+<body>
+    {% for scene in story.scenes %}
+        <div class="page">
+            {% for text in scene.textElements %}
+                <div class="text-element" style="
+                    top: {{ text.position.y }}px;
+                    left: {{ text.position.x }}px;
+                    font-family: '{{ text.fontFamily }}';
+                    font-size: {{ text.fontSize }}px;
+                    color: {{ text.color }};
+                    width: {{ text.width }}px;
+                ">
+                    {{ text.content | replace('{child_name}', personal_data.child_name) }}
+                </div>
+            {% endfor %}
+            {% for image in scene.imageElements %}
+                {% set image_url = user_images[loop.index0] if user_images|length > loop.index0 else image.imageUrl %}
+                <img class="image-element" src="file://{{ image_url }}" style="
+                    top: {{ image.position.y }}px;
+                    left: {{ image.position.x }}px;
+                    width: {{ image.width }}px;
+                    height: {{ image.height }}px;
+                " />
+            {% endfor %}
+        </div>
+    {% endfor %}
+</body>
+</html>

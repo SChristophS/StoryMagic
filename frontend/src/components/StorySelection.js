@@ -1,56 +1,57 @@
 // src/components/StorySelection.js
-import React, { useState, useEffect, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { AppContext } from '../contexts/AppContext';
-import './StorySelection.css';
 
-function StorySelection() {
+import React, { useEffect, useContext } from 'react';
+import axios from 'axios';
+import { AppContext } from '../context/AppContext';
+import { useNavigate } from 'react-router-dom';
+
+const StorySelection = () => {
+  const { userInfo, stories, setStories, setSelectedStory, setImagePrompts } = useContext(AppContext);
   const navigate = useNavigate();
-  const { userRole, childAge, setStory } = useContext(AppContext);
-  const [stories, setStories] = useState([]);
 
   useEffect(() => {
-    // API-Anfrage mit Parametern für Rolle und Alter
+    console.debug('Lade passende Geschichten von der API');
     axios
-      .get('http://localhost:5000/api/stories', {
+      .get('http://192.168.178.25:49158/api/stories', { // Verwende relativen Pfad, wenn Proxy konfiguriert ist
         params: {
-          role: userRole,
-          age: childAge,
+          role: userInfo.role,
+          childAge: userInfo.childAge,
         },
       })
       .then((response) => {
         setStories(response.data);
+        console.debug('Passende Geschichten geladen:', response.data);
       })
       .catch((error) => {
-        console.error('Fehler beim Abrufen der Geschichten:', error);
+        console.error('Fehler beim Laden der Geschichten:', error);
       });
-  }, [userRole, childAge]);
+  }, [userInfo, setStories]);
 
-  const handleSelection = (story) => {
-    setStory(story);
-    navigate('/personalization');
+  const handleSelectStory = (story) => {
+    setSelectedStory(story);
+    // Sammle die Bildanweisungen aus allen Szenen und deren imageElements
+    const prompts = story.scenes.flatMap(scene => 
+      scene.imageElements.map(imageElement => imageElement.imagePrompt)
+    ).filter(Boolean);
+    setImagePrompts(prompts);
+    console.debug('Bildanweisungen gesammelt:', prompts);
+    navigate('/image-prompts');
   };
 
   return (
-    <div className="story-selection-container">
-      <h2>Wähle eine Geschichte aus</h2>
-      <div className="stories-grid">
-        {stories.length > 0 ? (
-          stories.map((story) => (
-            <div key={story._id} className="story-card">
-              <img src={story.coverImage} alt={story.title} />
-              <h3>{story.title}</h3>
-              <p>{story.description}</p>
-              <button onClick={() => handleSelection(story)}>Auswählen</button>
-            </div>
-          ))
-        ) : (
-          <p>Keine passenden Geschichten gefunden.</p>
-        )}
-      </div>
+    <div>
+      <h1>Wähle eine Geschichte</h1>
+      <ul>
+        {stories.map((story) => (
+          <li key={story.id}>
+            <h2>{story.title}</h2>
+            <p>{story.description}</p>
+            <button onClick={() => handleSelectStory(story)}>Diese Geschichte wählen</button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
-}
+};
 
 export default StorySelection;
