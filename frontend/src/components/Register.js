@@ -3,25 +3,25 @@
 import React, { useState, useContext } from 'react';
 import axios from 'axios';
 import { AppContext } from '../context/AppContext';
-import { useHistory } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 const Register = () => {
   const { setAuthToken } = useContext(AppContext);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const history = useHistory();
+  const navigate = useNavigate();
 
   const handleRegister = (e) => {
     e.preventDefault();
     axios
-      .post('/api/register', { username, password })
+      .post('http://192.168.178.25:49158/api/register', { username, password })
       .then(() => {
-        return axios.post('/api/login', { username, password });
+        return axios.post('http://192.168.178.25:49158/api/login', { username, password });
       })
       .then((response) => {
         setAuthToken(response.data.access_token);
         localStorage.setItem('authToken', response.data.access_token);
-        history.push('/');
+        navigate('/');
       })
       .catch((error) => {
         console.error('Fehler bei der Registrierung:', error);

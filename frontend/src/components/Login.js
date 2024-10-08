@@ -3,22 +3,22 @@
 import React, { useState, useContext } from 'react';
 import axios from 'axios';
 import { AppContext } from '../context/AppContext';
-import { useHistory } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 const Login = () => {
   const { setAuthToken } = useContext(AppContext);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const history = useHistory();
+  const navigate = useNavigate();
 
   const handleLogin = (e) => {
     e.preventDefault();
     axios
-      .post('/api/login', { username, password })
+      .post('http://192.168.178.25:49158/api/login', { username, password })
       .then((response) => {
         setAuthToken(response.data.access_token);
         localStorage.setItem('authToken', response.data.access_token);
-        history.push('/');
+        navigate('/');
       })
       .catch((error) => {
         console.error('Fehler bei der Anmeldung:', error);

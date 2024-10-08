@@ -2,18 +2,19 @@
 
 import React, { useState, useContext } from 'react';
 import { AppContext } from '../context/AppContext';
-import { useNavigate  } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 const UserInfoForm = () => {
   const { userInfo, setUserInfo } = useContext(AppContext);
   const [role, setRole] = useState(userInfo.role || '');
   const [childAge, setChildAge] = useState(userInfo.childAge || '');
+  const [childName, setChildName] = useState(userInfo.childName || '');
   const navigate = useNavigate();
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    setUserInfo({ role, childAge });
-    console.debug('Benutzerinformationen gesetzt:', { role, childAge });
+    setUserInfo({ role, childAge, childName });
+    console.debug('Benutzerinformationen gesetzt:', { role, childAge, childName });
     navigate('/stories');
   };
 
@@ -21,6 +22,16 @@ const UserInfoForm = () => {
     <div>
       <h1>Informationen eingeben</h1>
       <form onSubmit={handleSubmit}>
+        <label>
+          Name des Kindes:
+          <input
+            type="text"
+            value={childName}
+            onChange={(e) => setChildName(e.target.value)}
+            required
+          />
+        </label>
+        <br />
         <label>
           Wer bist du?
           <select value={role} onChange={(e) => setRole(e.target.value)} required>
@@ -36,6 +47,7 @@ const UserInfoForm = () => {
             <option value="Freund">Freund</option>
           </select>
         </label>
+        <br />
         <label>
           Alter des Kindes:
           <input
@@ -47,6 +59,7 @@ const UserInfoForm = () => {
             required
           />
         </label>
+        <br />
         <button type="submit">Weiter</button>
       </form>
     </div>

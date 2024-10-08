@@ -6,6 +6,8 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 import os
 from werkzeug.utils import secure_filename
 from utils.validations import allowed_file
+from datetime import datetime
+from utils.database import db
 import logging
 
 class UploadImage(Resource):

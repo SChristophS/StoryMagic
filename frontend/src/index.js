@@ -3,9 +3,9 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
-import AppRoutes from './routes'; // Importiere AppRoutes statt Routes
-import { AppProvider } from './context/AppContext'; // Benannter Import
-import ErrorBoundary from './components/ErrorBoundary'; // Optional: Error Boundary
+import App from './App';
+import { AppProvider } from './context/AppContext';
+import ErrorBoundary from './components/ErrorBoundary';
 import './styles.css';
 
 const container = document.getElementById('root');
@@ -16,7 +16,7 @@ root.render(
     <BrowserRouter>
       <AppProvider>
         <ErrorBoundary>
-          <AppRoutes />
+          <App />
         </ErrorBoundary>
       </AppProvider>
     </BrowserRouter>
