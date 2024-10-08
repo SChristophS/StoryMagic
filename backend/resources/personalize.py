@@ -1,6 +1,7 @@
 # resources/personalize.py
 
 from flask_restful import Resource, reqparse
+from flask import request
 from utils.database import db
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from models.personalized_story import PersonalizedStory
@@ -22,21 +23,42 @@ class UserStories(Resource):
             logging.error(f"Error retrieving personalized stories: {e}")
             return {'message': 'Error retrieving personalized stories'}, 500
 
-
+class DeletePersonalizedStory(Resource):
+    @jwt_required()
+    def delete(self, personalized_story_id):
+        current_user_id = get_jwt_identity()
+        if not is_valid_object_id(personalized_story_id):
+            logging.warning(f"Invalid personalized story ID: {personalized_story_id}")
+            return {'message': 'Invalid personalized story ID'}, 400
+        try:
+            result = db.personalized_stories.delete_one({
+                '_id': ObjectId(personalized_story_id),
+                'user_id': current_user_id
+            })
+            if result.deleted_count == 0:
+                logging.warning(f"Personalized story not found or access denied: {personalized_story_id}")
+                return {'message': 'Personalized story not found or access denied'}, 404
+            logging.debug(f"Personalized story deleted: {personalized_story_id}")
+            return {'message': 'Personalized story deleted successfully'}, 200
+        except Exception as e:
+            logging.error(f"Error deleting personalized story: {e}")
+            return {'message': 'Error deleting personalized story'}, 500
+            
 class PersonalizeStory(Resource):
     @jwt_required()
     def post(self):
         current_user_id = get_jwt_identity()
-        parser = reqparse.RequestParser()
-        parser.add_argument('story_id', required=True, help='Story ID is required')
-        parser.add_argument('personal_data', type=dict, required=True, help='Personal data is required')
-        parser.add_argument('user_images', type=list, location='json', required=False)
-        args = parser.parse_args()
+        data = request.get_json()
         
-        story_id = args['story_id']
-        personal_data = args['personal_data']
-        user_images = args.get('user_images', [])
-        
+        story_id = data.get('story_id')
+        personal_data = data.get('personal_data')
+        user_images = data.get('user_images', [])
+
+        print('Empfangene user_images:', user_images)
+
+        if not isinstance(user_images, list):
+            user_images = []
+
         if not is_valid_object_id(story_id):
             logging.warning(f"Invalid story ID: {story_id}")
             return {'message': 'Invalid story ID'}, 400
@@ -44,35 +66,66 @@ class PersonalizeStory(Resource):
             logging.warning("Invalid personal data: Missing child's name")
             return {'message': "Child's name is required"}, 400
         try:
-            # Prüfe, ob die Geschichte existiert
-            if not db.stories.find_one({'_id': ObjectId(story_id)}):
+            # Hole die ursprüngliche Geschichte
+            original_story = db.stories.find_one({'_id': ObjectId(story_id)})
+            if not original_story:
                 logging.warning(f"Story not found: {story_id}")
                 return {'message': 'Story not found'}, 404
-            
+
+            # personalisieren der Szenen
+            personalized_scenes = []
+            image_index = 0  # Index für user_images
+
+            for scene in original_story.get('scenes', []):
+                personalized_scene = scene.copy()
+                personalized_image_elements = []
+
+                for img_elem in personalized_scene.get('imageElements', []):
+                    img_elem_copy = img_elem.copy()
+                    if image_index < len(user_images):
+                        img_elem_copy['imageUrl'] = user_images[image_index]
+                        image_index += 1
+                    else:
+                        img_elem_copy['imageUrl'] = img_elem.get('imageUrl', '')
+                    personalized_image_elements.append(img_elem_copy)
+
+                personalized_scene['imageElements'] = personalized_image_elements
+                personalized_scenes.append(personalized_scene)
+
             # Erstelle die personalisierte Geschichte
             personalized_story = {
-                'user_id' : current_user_id,
+                'user_id': current_user_id,
                 'story_id': story_id,
+                'title': original_story.get('title', ''),
+                'description': original_story.get('description', ''),
+                'scenes': personalized_scenes,
                 'personal_data': personal_data,
-                'user_images': user_images,
                 'created_at': datetime.utcnow()
             }
             result = db.personalized_stories.insert_one(personalized_story)
             logging.debug(f"Personalized story created with ID: {result.inserted_id}")
             return {'personalized_story_id': str(result.inserted_id)}, 201
+
         except Exception as e:
-            logging.error(f"Error creating personalized story: {e}")
+            logging.error(f"Error creating personalized story: {e}", exc_info=True)
             return {'message': 'Error creating personalized story'}, 500
 
+
+
 class PersonalizedStoryDetail(Resource):
+    @jwt_required()
     def get(self, personalized_story_id):
+        current_user_id = get_jwt_identity()
         if not is_valid_object_id(personalized_story_id):
             logging.warning(f"Invalid personalized story ID: {personalized_story_id}")
             return {'message': 'Invalid personalized story ID'}, 400
         try:
-            story_data = db.personalized_stories.find_one({'_id': ObjectId(personalized_story_id)})
+            story_data = db.personalized_stories.find_one({
+                '_id': ObjectId(personalized_story_id),
+                'user_id': current_user_id
+            })
             if not story_data:
-                logging.warning(f"Personalized story not found: {personalized_story_id}")
+                logging.warning(f"Personalized story not found or access denied: {personalized_story_id}")
                 return {'message': 'Personalized story not found'}, 404
             personalized_story = PersonalizedStory(story_data)
             logging.debug(f"Personalized story retrieved: {personalized_story.to_dict()}")
@@ -80,3 +133,23 @@ class PersonalizedStoryDetail(Resource):
         except Exception as e:
             logging.error(f"Error retrieving personalized story: {e}")
             return {'message': 'Error retrieving personalized story'}, 500
+
+    @jwt_required()
+    def delete(self, personalized_story_id):
+        current_user_id = get_jwt_identity()
+        if not is_valid_object_id(personalized_story_id):
+            logging.warning(f"Invalid personalized story ID: {personalized_story_id}")
+            return {'message': 'Invalid personalized story ID'}, 400
+        try:
+            result = db.personalized_stories.delete_one({
+                '_id': ObjectId(personalized_story_id),
+                'user_id': current_user_id
+            })
+            if result.deleted_count == 0:
+                logging.warning(f"Personalized story not found or access denied: {personalized_story_id}")
+                return {'message': 'Personalized story not found or access denied'}, 404
+            logging.debug(f"Personalized story deleted: {personalized_story_id}")
+            return {'message': 'Personalized story deleted successfully'}, 200
+        except Exception as e:
+            logging.error(f"Error deleting personalized story: {e}")
+            return {'message': 'Error deleting personalized story'}, 500
