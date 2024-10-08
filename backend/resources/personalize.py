@@ -2,14 +2,31 @@
 
 from flask_restful import Resource, reqparse
 from utils.database import db
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from models.personalized_story import PersonalizedStory
 from datetime import datetime
 import logging
 from bson.objectid import ObjectId
 from utils.validations import is_valid_object_id, is_valid_name
 
+class UserStories(Resource):
+    @jwt_required()
+    def get(self):
+        current_user_id = get_jwt_identity()
+        try:
+            stories_cursor = db.personalized_stories.find({'user_id': current_user_id})
+            stories = [PersonalizedStory(s).to_dict() for s in stories_cursor]
+            logging.debug(f"Personalized stories retrieved for user {current_user_id}")
+            return stories, 200
+        except Exception as e:
+            logging.error(f"Error retrieving personalized stories: {e}")
+            return {'message': 'Error retrieving personalized stories'}, 500
+
+
 class PersonalizeStory(Resource):
+    @jwt_required()
     def post(self):
+        current_user_id = get_jwt_identity()
         parser = reqparse.RequestParser()
         parser.add_argument('story_id', required=True, help='Story ID is required')
         parser.add_argument('personal_data', type=dict, required=True, help='Personal data is required')
@@ -34,6 +51,7 @@ class PersonalizeStory(Resource):
             
             # Erstelle die personalisierte Geschichte
             personalized_story = {
+                'user_id' : current_user_id,
                 'story_id': story_id,
                 'personal_data': personal_data,
                 'user_images': user_images,
