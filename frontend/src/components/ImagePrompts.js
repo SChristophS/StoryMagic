@@ -20,7 +20,13 @@ const ImagePrompts = () => {
       .post('http://192.168.178.25:49158/api/upload-image', formData)
       .then((response) => {
         const imagePath = response.data.file_path;
-        setUserImages([...userImages, imagePath]);
+		
+		setUserImages((prevImages) => ({
+			...prevImages,
+			[sceneIndex]: imageUrl,
+		}));
+	
+        //setUserImages([...userImages, imagePath]);
         console.debug('Bild hochgeladen:', imagePath);
         if (currentIndex < imagePrompts.length - 1) {
           setCurrentIndex(currentIndex + 1);
@@ -40,14 +46,17 @@ const ImagePrompts = () => {
 
   return (
     <div>
-      <h1>Bild {currentIndex + 1} von {imagePrompts.length}</h1>
-      <p>{imagePrompts[currentIndex]}</p>
-      <input type="file" onChange={handleFileChange} accept="image/*" capture="camera" />
-      <div>
-        {userImages.map((image, index) => (
-          <img key={index} src={image} alt={`User Upload ${index}`} width="100" />
-        ))}
-      </div>
+      <h1>Bilder hochladen</h1>
+      {selectedStory.scenes.map((scene, index) => (
+        <div key={index}>
+          <p>{scene.imageElements[0].imagePrompt}</p>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(event) => handleImageUpload(index, event)}
+          />
+        </div>
+      ))}
     </div>
   );
 };

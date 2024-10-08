@@ -19,7 +19,7 @@ export const AppProvider = ({ children }) => {
   const [stories, setStories] = useState([]);
   const [selectedStory, setSelectedStory] = useState(null);
   const [imagePrompts, setImagePrompts] = useState([]);
-  const [userImages, setUserImages] = useState([]);
+  const [userImages, setUserImages] = useState({});
   const [personalData, setPersonalData] = useState({
     child_name: '',
     role: '',

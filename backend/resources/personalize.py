@@ -49,22 +49,16 @@ class PersonalizeStory(Resource):
     def post(self):
         current_user_id = get_jwt_identity()
         data = request.get_json()
-        
+
         story_id = data.get('story_id')
         personal_data = data.get('personal_data')
-        user_images = data.get('user_images', [])
+        user_images = data.get('user_images', {})  # Erwartet ein Dictionary
 
-        print('Empfangene user_images:', user_images)
+        if not isinstance(user_images, dict):
+            user_images = {}
 
-        if not isinstance(user_images, list):
-            user_images = []
+        # ... Validierungscode ...
 
-        if not is_valid_object_id(story_id):
-            logging.warning(f"Invalid story ID: {story_id}")
-            return {'message': 'Invalid story ID'}, 400
-        if not is_valid_name(personal_data.get('child_name')):
-            logging.warning("Invalid personal data: Missing child's name")
-            return {'message': "Child's name is required"}, 400
         try:
             # Hole die ursprüngliche Geschichte
             original_story = db.stories.find_one({'_id': ObjectId(story_id)})
@@ -74,22 +68,13 @@ class PersonalizeStory(Resource):
 
             # personalisieren der Szenen
             personalized_scenes = []
-            image_index = 0  # Index für user_images
-
-            for scene in original_story.get('scenes', []):
+            for index, scene in enumerate(original_story.get('scenes', [])):
                 personalized_scene = scene.copy()
-                personalized_image_elements = []
 
-                for img_elem in personalized_scene.get('imageElements', []):
-                    img_elem_copy = img_elem.copy()
-                    if image_index < len(user_images):
-                        img_elem_copy['imageUrl'] = user_images[image_index]
-                        image_index += 1
-                    else:
-                        img_elem_copy['imageUrl'] = img_elem.get('imageUrl', '')
-                    personalized_image_elements.append(img_elem_copy)
-
-                personalized_scene['imageElements'] = personalized_image_elements
+                # Bilder der Szene zuordnen
+                if str(index) in user_images:
+                    for img_elem in personalized_scene.get('imageElements', []):
+                        img_elem['imageUrl'] = user_images[str(index)]
                 personalized_scenes.append(personalized_scene)
 
             # Erstelle die personalisierte Geschichte
@@ -109,6 +94,7 @@ class PersonalizeStory(Resource):
         except Exception as e:
             logging.error(f"Error creating personalized story: {e}", exc_info=True)
             return {'message': 'Error creating personalized story'}, 500
+
 
 
 

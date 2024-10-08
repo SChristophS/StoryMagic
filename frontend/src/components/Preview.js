@@ -53,16 +53,16 @@ const Preview = () => {
 				</span>
 			  ))}
 			</p>
-			{scene.imageElements.map((imageElement, imgIdx) => (
+			{userImages[index] && (
 			  <img
-				key={imgIdx}
-				src={imageElement.imageUrl}
-				alt={`Bild ${imgIdx} auf Seite ${index + 1}`}
+				src={userImages[index]}
+				alt={`Bild für Szene ${index + 1}`}
 				width="200"
 			  />
-			))}
+			)}
 		  </div>
 		))}
+
         <button onClick={handleSaveStory}>Geschichte speichern</button>
       </div>
     </div>
