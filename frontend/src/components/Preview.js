@@ -1,33 +1,41 @@
 // src/components/Preview.js
+
 import React, { useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { AppContext } from '../contexts/AppContext';
-import './Preview.css';
+import { AppContext } from '../context/AppContext';
 
-function Preview() {
-  const navigate = useNavigate();
-  const { userName, childName, photo, story } = useContext(AppContext);
+const Preview = () => {
+  const { selectedStory, userInfo, userImages } = useContext(AppContext);
 
-  const handleOrder = () => {
-    navigate('/order');
-  };
+  if (!selectedStory) {
+    return <p>Keine Geschichte ausgewählt.</p>;
+  }
 
   return (
-    <div className="preview-container">
-      <h2>Vorschau deines Buches</h2>
-      <div className="book-preview">
-        <h3>{story.title}</h3>
-        <p>
-          Geschichte für <strong>{childName}</strong> von <strong>{userName}</strong>
-        </p>
-        <img src={photo} alt="User" />
-        <p>{story.description}</p>
+    <div>
+      <h1>Vorschau deines Buches</h1>
+      <h2>{selectedStory.title}</h2>
+      <p>{selectedStory.description}</p>
+      <div>
+        {selectedStory.scenes.map((scene, index) => (
+          <div key={index}>
+            <h3>Seite {index + 1}</h3>
+            <p>
+              {scene.textElements.map((text, idx) => (
+                <span key={idx}>
+                  {text.content.replace('{child_name}', userInfo.childName || '...')}
+                </span>
+              ))}
+            </p>
+            {userImages[index] && (
+              <img src={userImages[index]} alt={`User Upload ${index}`} width="200" />
+            )}
+          </div>
+        ))}
       </div>
-      <button className="order-button" onClick={handleOrder}>
-        Bestellung fortsetzen
-      </button>
+      {/* Optional: Button zum Generieren des PDFs */}
+      {/* <button onClick={handleGeneratePDF}>PDF generieren</button> */}
     </div>
   );
-}
+};
 
 export default Preview;
