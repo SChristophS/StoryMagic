@@ -10,15 +10,14 @@ const Preview = () => {
   const navigate = useNavigate();
 
   const handleSaveStory = () => {
-	  const payload = {
-		story_id: selectedStory.id,
-		personal_data: personalData,
-		user_images: userImages
-	  };
-	  
-	    console.log('Payload:', payload);
-		console.log('personalData:', personalData);
+    const payload = {
+      story_id: selectedStory.id,
+      personal_data: personalData,
+      user_images: userImages,
+    };
 
+    console.log('Payload:', payload);
+    console.log('personalData:', personalData);
 
     axios
       .post('http://192.168.178.25:49158/api/personalize', payload)
@@ -30,7 +29,7 @@ const Preview = () => {
         console.error('Fehler beim Speichern der Geschichte:', error);
       });
   };
-  
+
   if (!selectedStory) {
     return <p>Keine Geschichte ausgewählt.</p>;
   }
@@ -41,28 +40,27 @@ const Preview = () => {
       <h2>{selectedStory.title}</h2>
       <p>{selectedStory.description}</p>
       <div>
-		{selectedStory.scenes.map((scene, index) => (
-		  <div key={index}>
-			<h3>Seite {index + 1}</h3>
-			<p>
-			  {scene.textElements.map((text, idx) => (
-				<span key={idx}>
-				  {text.content
-					.replace('{child_name}', personalData.child_name || '...')
-					.replace('{role}', personalData.role || '...')}
-				</span>
-			  ))}
-			</p>
-			{userImages[index] && (
-			  <img
-				src={userImages[index]}
-				alt={`Bild für Szene ${index + 1}`}
-				width="200"
-			  />
-			)}
-		  </div>
-		))}
-
+        {selectedStory.scenes.map((scene, index) => (
+          <div key={index}>
+            <h3>Seite {index + 1}</h3>
+            <p>
+              {scene.textElements.map((text, idx) => (
+                <span key={idx}>
+                  {text.content
+                    .replace('{child_name}', personalData.child_name || '...')
+                    .replace('{role}', personalData.role || '...')}
+                </span>
+              ))}
+            </p>
+            {userImages[index] && (
+              <img
+                src={userImages[index]}
+                alt={`Bild für Szene ${index + 1}`}
+                width="200"
+              />
+            )}
+          </div>
+        ))}
         <button onClick={handleSaveStory}>Geschichte speichern</button>
       </div>
     </div>

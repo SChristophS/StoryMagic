@@ -9,7 +9,6 @@ class PersonalizedStory:
         self.description = data.get('description', '')
         self.scenes = data.get('scenes', [])
         self.personal_data = data.get('personal_data', {})
-        self.user_images = data.get('user_images', [])
         self.created_at = data.get('created_at')
 
     def to_dict(self):
@@ -21,6 +20,5 @@ class PersonalizedStory:
             'description': self.description,
             'scenes': self.scenes,
             'personal_data': self.personal_data,
-            'user_images': self.user_images,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }

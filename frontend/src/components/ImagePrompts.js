@@ -6,43 +6,41 @@ import { AppContext } from '../context/AppContext';
 import { useNavigate } from 'react-router-dom';
 
 const ImagePrompts = () => {
-  const { imagePrompts, userImages, setUserImages } = useContext(AppContext);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const { selectedStory, userImages, setUserImages } = useContext(AppContext);
   const navigate = useNavigate();
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
+  if (!selectedStory) {
+    console.debug('selectedStory ist nicht definiert:', selectedStory);
+    return <p>Keine Geschichte ausgewählt.</p>;
+  }
+
+  const handleImageUpload = (sceneIndex, event) => {
+    const file = event.target.files[0];
     console.debug('Ausgewählte Datei:', file);
     const formData = new FormData();
     formData.append('file', file);
 
     axios
-      .post('http://192.168.178.25:49158/api/upload-image', formData)
+      .post('/api/upload-image', formData)
       .then((response) => {
         const imagePath = response.data.file_path;
-		
-		setUserImages((prevImages) => ({
-			...prevImages,
-			[sceneIndex]: imageUrl,
-		}));
-	
-        //setUserImages([...userImages, imagePath]);
+
+        // Update userImages mit dem Szenenindex
+        setUserImages((prevImages) => ({
+          ...prevImages,
+          [sceneIndex]: imagePath,
+        }));
+
         console.debug('Bild hochgeladen:', imagePath);
-        if (currentIndex < imagePrompts.length - 1) {
-          setCurrentIndex(currentIndex + 1);
-        } else {
-          navigate('/preview');
-        }
       })
       .catch((error) => {
         console.error('Fehler beim Hochladen des Bildes:', error);
       });
   };
 
-  if (!imagePrompts || imagePrompts.length === 0) {
-    console.debug('imagePrompts ist leer oder nicht definiert:', imagePrompts);
-    return <p>Keine Bildanweisungen vorhanden.</p>;
-  }
+  const handleNext = () => {
+    navigate('/preview');
+  };
 
   return (
     <div>
@@ -55,8 +53,16 @@ const ImagePrompts = () => {
             accept="image/*"
             onChange={(event) => handleImageUpload(index, event)}
           />
+          {userImages[index] && (
+            <img
+              src={userImages[index]}
+              alt={`Bild für Szene ${index + 1}`}
+              width="200"
+            />
+          )}
         </div>
       ))}
+      <button onClick={handleNext}>Weiter zur Vorschau</button>
     </div>
   );
 };

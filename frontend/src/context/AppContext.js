@@ -9,12 +9,6 @@ export const AppContext = createContext();
 export const AppProvider = ({ children }) => {
   const [authToken, setAuthToken] = useState(localStorage.getItem('authToken'));
   const [currentUser, setCurrentUser] = useState(null);
-  
-  const [userInfo, setUserInfo] = useState({
-    role: '',
-    childAge: '',
-    childName: '',
-  });
 
   const [stories, setStories] = useState([]);
   const [selectedStory, setSelectedStory] = useState(null);
@@ -25,15 +19,15 @@ export const AppProvider = ({ children }) => {
     role: '',
     child_age: '',
   });
-  
+
   useEffect(() => {
     if (authToken) {
       try {
-        const decoded = jwtDecode(authToken); // Korrekt verwendet
+		const decoded = jwtDecode(authToken);
         console.log('AuthToken dekodiert:', decoded);
-        setCurrentUser(decoded.sub || decoded.identity); // Verwende das richtige Feld
+        setCurrentUser(decoded.sub || decoded.identity);
         console.log('Aktueller Benutzer gesetzt:', currentUser);
-        
+
         axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
       } catch (error) {
         console.error('Fehler beim Dekodieren des Tokens:', error);
@@ -53,8 +47,6 @@ export const AppProvider = ({ children }) => {
         setAuthToken,
         currentUser,
         setCurrentUser,
-        userInfo,
-        setUserInfo,
         stories,
         setStories,
         selectedStory,

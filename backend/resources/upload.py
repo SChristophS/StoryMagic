@@ -1,7 +1,7 @@
 # resources/upload.py
 
-from flask_restful import Resource, reqparse
-from flask import request, current_app
+from flask_restful import Resource
+from flask import request, current_app, url_for
 from flask_jwt_extended import jwt_required, get_jwt_identity
 import os
 from werkzeug.utils import secure_filename
@@ -36,8 +36,9 @@ class UploadImage(Resource):
                 'file_path': file_path,
                 'uploaded_at': datetime.utcnow()
             })
-            return {'file_path': file_path}, 201
+            # Erstelle eine URL, die vom Frontend verwendet werden kann
+            file_url = url_for('static', filename=f'uploads/{unique_filename}', _external=True)
+            return {'file_path': file_url}, 201
         else:
             logging.warning("File type not allowed")
             return {'message': 'File type not allowed'}, 400
-
