@@ -10,6 +10,40 @@ import logging
 from bson.objectid import ObjectId
 from utils.validations import is_valid_object_id, is_valid_name
 
+class UserStories(Resource):
+    @jwt_required()
+    def get(self):
+        current_user_id = get_jwt_identity()
+        try:
+            stories_cursor = db.personalized_stories.find({'user_id': current_user_id})
+            stories = [PersonalizedStory(s).to_dict() for s in stories_cursor]
+            logging.debug(f"Personalized stories retrieved for user {current_user_id}")
+            return stories, 200
+        except Exception as e:
+            logging.error(f"Error retrieving personalized stories: {e}", exc_info=True)
+            return {'message': 'Error retrieving personalized stories'}, 500
+
+class DeletePersonalizedStory(Resource):
+    @jwt_required()
+    def delete(self, personalized_story_id):
+        current_user_id = get_jwt_identity()
+        if not is_valid_object_id(personalized_story_id):
+            logging.warning(f"Invalid personalized story ID: {personalized_story_id}")
+            return {'message': 'Invalid personalized story ID'}, 400
+        try:
+            result = db.personalized_stories.delete_one({
+                '_id': ObjectId(personalized_story_id),
+                'user_id': current_user_id
+            })
+            if result.deleted_count == 0:
+                logging.warning(f"Personalized story not found or access denied: {personalized_story_id}")
+                return {'message': 'Personalized story not found or access denied'}, 404
+            logging.debug(f"Personalized story deleted: {personalized_story_id}")
+            return {'message': 'Personalized story deleted successfully'}, 200
+        except Exception as e:
+            logging.error(f"Error deleting personalized story: {e}", exc_info=True)
+            return {'message': 'Error deleting personalized story'}, 500
+
 class PersonalizeStory(Resource):
     @jwt_required()
     def post(self):
@@ -46,6 +80,16 @@ class PersonalizeStory(Resource):
                     for img_elem in personalized_scene.get('imageElements', []):
                         img_elem['imageUrl'] = user_images[str(index)]
                 personalized_scenes.append(personalized_scene)
+
+            # Ersetze Platzhalter in den Textelementen
+            child_name = personal_data.get('child_name', '...')
+            role = personal_data.get('role', '...')
+
+            for scene in personalized_scenes:
+                for text_elem in scene.get('textElements', []):
+                    content = text_elem.get('content', '')
+                    content = content.replace('{child_name}', child_name).replace('{role}', role)
+                    text_elem['content'] = content
 
             # Erstelle die personalisierte Geschichte
             personalized_story = {
