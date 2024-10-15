@@ -1,0 +1,96 @@
+{
+  "title": "Ein Abenteuer mit Oma",
+  "description": "Spannendes Abenteuer mit Oma",
+  "scenes": [
+    {
+      "pageNumber": 1,
+      "background": "C:\\Users\\z606317\\OneDrive - ZF Friedrichshafen AG\\Desktop\\SQL\\book1\\bild_800x600.jpg",
+      "textElements": [
+        {
+          "content": "Es war einmal ein Kind namens test, das mit Papa ein Abenteuer erlebte.",
+          "position": {
+            "x": 365,
+            "y": 109
+          },
+          "fontFamily": "Arial",
+          "fontSize": 24,
+          "color": "#000000",
+          "width": 300,
+          "layer": 1,
+          "rotation": 0,
+          "opacity": 1.0,
+          "fontStyle": "normal",
+          "visible": true
+        }
+      ],
+      "imageElements": [
+        {
+          "imageUrl": "C:\\Users\\z606317\\OneDrive - ZF Friedrichshafen AG\\Desktop\\SQL\\book1\\bild_800x600.jpg",
+          "position": {
+            "x": 62,
+            "y": 103
+          },
+          "width": 200,
+          "height": 150,
+          "imagePrompt": "Bitte lade ein Bild von {child_name} hoch.",
+          "layer": 0,
+          "rotation": 0,
+          "opacity": 1.0,
+          "visible": true,
+          "userProvided": true
+        }
+      ]
+    },
+    {
+      "pageNumber": 2,
+      "background": "C:\\Users\\z606317\\OneDrive - ZF Friedrichshafen AG\\Desktop\\SQL\\book1\\bild_800x600.jpg",
+      "textElements": [
+        {
+          "content": "test und Papa entdeckten einen geheimnisvollen Baum.",
+          "position": {
+            "x": 50,
+            "y": 100
+          },
+          "fontFamily": "Arial",
+          "fontSize": 24,
+          "color": "#000000",
+          "width": 300,
+          "layer": 1,
+          "rotation": 0,
+          "opacity": 1.0,
+          "fontStyle": "normal",
+          "visible": true
+        }
+      ],
+      "imageElements": [
+        {
+          "imageUrl": "C:\\Users\\z606317\\OneDrive - ZF Friedrichshafen AG\\Desktop\\SQL\\book1\\bild_800x600.jpg",
+          "position": {
+            "x": 50,
+            "y": 200
+          },
+          "width": 200,
+          "height": 150,
+          "imagePrompt": "Bitte lade ein Bild von {role} hoch.",
+          "layer": 0,
+          "rotation": 0,
+          "opacity": 1.0,
+          "visible": true,
+          "userProvided": true
+        }
+      ]
+    }
+  ],
+  "personal_data": {
+    "child_name": "test",
+    "role": "Papa",
+    "child_age": "4"
+  },
+  "author": "Christoph",
+  "illustrator": "ChatGPT",
+  "pageSize": {
+    "width": 800,
+    "height": 600
+  },
+  "coverImage": "C:/Users/z606317/OneDrive - ZF Friedrichshafen AG/Desktop/SQL/book1/coverImage.jpg"
+}
