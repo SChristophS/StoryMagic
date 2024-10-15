@@ -48,8 +48,8 @@
         {
           "content": "test und Papa entdeckten einen geheimnisvollen Baum.",
           "position": {
-            "x": 50,
-            "y": 100
+            "x": 492,
+            "y": 7
           },
           "fontFamily": "Arial",
           "fontSize": 24,
@@ -92,5 +92,5 @@
     "width": 800,
     "height": 600
   },
-  "coverImage": "C:/Users/z606317/OneDrive - ZF Friedrichshafen AG/Desktop/SQL/book1/coverImage.jpg"
+  "coverImage": "C:/git/StoryMagic/StoryMaker/book1/coverImage.jpg"
 }

@@ -1,7 +1,7 @@
 # scenes.py
 
 import logging
-from PyQt5.QtWidgets import QGraphicsScene, QGraphicsRectItem, QGraphicsTextItem
+from PyQt5.QtWidgets import QGraphicsScene, QGraphicsRectItem, QGraphicsTextItem, QGraphicsPixmapItem
 from PyQt5.QtGui import QFont, QBrush, QPen, QColor
 from PyQt5.QtCore import Qt
 import os
@@ -29,7 +29,7 @@ class SeitenSzene(QGraphicsScene):
         # Zeichne ein Rechteck, das die Seitengröße darstellt
         border_rect = QGraphicsRectItem(0, 0, self.page_width, self.page_height)
         border_pen = QPen(QColor(255, 0, 0), 2)  # Roter Rand, 2px breit
-        border_rect.setPen(border_pen)
+        border_rect.setPen(QPen(border_pen))
         border_rect.setBrush(QBrush(Qt.NoBrush))  # Transparente Füllung
         border_rect.setZValue(-1)  # Hinter anderen Elementen
         self.addItem(border_rect)
@@ -78,7 +78,7 @@ class CoverSzene(QGraphicsScene):
         # Zeichne ein Rechteck, das die Seitengröße darstellt
         border_rect = QGraphicsRectItem(0, 0, self.page_width, self.page_height)
         border_pen = QPen(QColor(255, 0, 0), 2)  # Roter Rand, 2px breit
-        border_rect.setPen(border_pen)
+        border_rect.setPen(QPen(border_pen))
         border_rect.setBrush(QBrush(Qt.NoBrush))  # Transparente Füllung
         border_rect.setZValue(-1)  # Hinter anderen Elementen
         self.addItem(border_rect)
@@ -92,7 +92,9 @@ class CoverSzene(QGraphicsScene):
             # Falls kein Coverbild vorhanden ist, leere Seite anzeigen
             rect_item = QGraphicsRectItem(0, 0, self.page_width, self.page_height)
             rect_item.setBrush(QBrush(Qt.white))
-            rect_item.setPen(Qt.NoPen)
+            pen = QPen()
+            pen.setStyle(Qt.NoPen)
+            rect_item.setPen(pen)
             self.addItem(rect_item)
             # Text anzeigen, dass kein Coverbild vorhanden ist
             text_item = QGraphicsTextItem("Kein Coverbild vorhanden")
