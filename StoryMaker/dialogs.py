@@ -1,9 +1,9 @@
 # dialogs.py
 
 from PyQt5.QtWidgets import (
-    QDialog, QLabel, QLineEdit, QVBoxLayout, QHBoxLayout, QPushButton,
+    QDialog, QLabel, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, 
     QFileDialog, QColorDialog, QFontDialog, QDoubleSpinBox, QSpinBox, QCheckBox, QProgressBar,
-    QGraphicsTextItem, QGraphicsPixmapItem 
+    QGraphicsTextItem, QGraphicsPixmapItem, QMessageBox
 )
 from PyQt5.QtGui import QPixmap, QFont, QColor, QMovie
 from PyQt5.QtCore import Qt
@@ -12,7 +12,6 @@ import logging
 
 # Eigenschaftseditor importiert nicht mehr direkt Elemente
 # from elements import VerschiebbaresTextElement, VerschiebbaresBildElement  # Entfernt
-
 
 class EinstellungenDialog(QDialog):
     def __init__(self, json_daten, parent=None):
@@ -317,6 +316,84 @@ class EigenschaftenDialog(QDialog):
                 # Bild neu laden und skalieren
                 self.element.bild_laden()
 
+        self.accept()
+
+
+class DatabaseSettingsDialog(QDialog):
+    def __init__(self, db_manager, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Datenbank-Einstellungen")
+        self.db_manager = db_manager
+        self.init_ui()
+
+    def init_ui(self):
+        layout = QVBoxLayout()
+        
+        # Host
+        host_layout = QHBoxLayout()
+        host_label = QLabel("Host:")
+        self.host_input = QLineEdit(self.db_manager.host)
+        host_layout.addWidget(host_label)
+        host_layout.addWidget(self.host_input)
+        layout.addLayout(host_layout)
+        
+        # Port
+        port_layout = QHBoxLayout()
+        port_label = QLabel("Port:")
+        self.port_input = QLineEdit(str(self.db_manager.port))
+        port_layout.addWidget(port_label)
+        port_layout.addWidget(self.port_input)
+        layout.addLayout(port_layout)
+        
+        # Datenbankname
+        db_name_layout = QHBoxLayout()
+        db_name_label = QLabel("Datenbankname:")
+        self.db_name_input = QLineEdit(self.db_manager.db_name)
+        db_name_layout.addWidget(db_name_label)
+        db_name_layout.addWidget(self.db_name_input)
+        layout.addLayout(db_name_layout)
+        
+        # Sammlung
+        collection_layout = QHBoxLayout()
+        collection_label = QLabel("Sammlung:")
+        self.collection_input = QLineEdit(self.db_manager.collection_name)
+        collection_layout.addWidget(collection_label)
+        collection_layout.addWidget(self.collection_input)
+        layout.addLayout(collection_layout)
+        
+        # Buttons
+        buttons_layout = QHBoxLayout()
+        save_button = QPushButton("Speichern")
+        save_button.clicked.connect(self.save_settings)
+        cancel_button = QPushButton("Abbrechen")
+        cancel_button.clicked.connect(self.reject)
+        buttons_layout.addStretch()
+        buttons_layout.addWidget(save_button)
+        buttons_layout.addWidget(cancel_button)
+        layout.addLayout(buttons_layout)
+        
+        self.setLayout(layout)
+
+    def save_settings(self):
+        host = self.host_input.text().strip()
+        port_text = self.port_input.text().strip()
+        db_name = self.db_name_input.text().strip()
+        collection_name = self.collection_input.text().strip()
+        
+        # Validierung der Eingaben
+        if not host or not port_text or not db_name or not collection_name:
+            QMessageBox.warning(self, "Ungültige Eingaben", "Alle Felder müssen ausgefüllt sein.")
+            return
+        
+        try:
+            port = int(port_text)
+        except ValueError:
+            QMessageBox.warning(self, "Ungültige Eingabe", "Der Port muss eine Zahl sein.")
+            return
+        
+        # Aktualisieren der Datenbank-Einstellungen
+        self.db_manager.update_settings(host, port, db_name, collection_name)
+        QMessageBox.information(self, "Einstellungen gespeichert", "Datenbank-Einstellungen wurden aktualisiert.")
         self.accept()
 
 

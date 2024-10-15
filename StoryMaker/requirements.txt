@@ -3,3 +3,4 @@ requests
 flake8
 pyinstaller
 pillow
+pymongo

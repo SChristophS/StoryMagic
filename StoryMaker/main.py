@@ -10,40 +10,42 @@ from PIL import Image  # For image processing
 
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QAction, QFileDialog, QMessageBox, QToolBar,
-    QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QGraphicsView, QStyle
+    QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QGraphicsView, QStyle,
+    QInputDialog
 )
 from PyQt5.QtGui import QPainter, QImage, QKeySequence
 from PyQt5.QtCore import Qt, QObject, pyqtSignal, QThread
 
-from dialogs import EinstellungenDialog, LoadingDialog  # Removed EigenschaftenDialog
+from dialogs import EinstellungenDialog, EigenschaftenDialog, LoadingDialog, DatabaseSettingsDialog  # Inklusive DatabaseSettingsDialog
 from elements import VerschiebbaresTextElement, VerschiebbaresBildElement, HintergrundElement
 from scenes import SeitenSzene, CoverSzene
+from database import DatabaseManager
 
-# 1. Remove all existing logger handlers to prevent duplicate logs
+# 1. Entfernen aller bestehenden Logger-Handler, um doppelte Logs zu vermeiden
 for handler in logging.root.handlers[:]:
     logging.root.removeHandler(handler)
 
-# 2. Set sys.stdout encoding to UTF-8 to support Unicode characters in console output
+# 2. Setzen der sys.stdout-Kodierung auf UTF-8, um Unicode-Zeichen in der Konsole zu unterstützen
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
-# 3. Manual logger configuration
+# 3. Manuelle Logger-Konfiguration
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-# 3.1. StreamHandler for console output
+# 3.1. StreamHandler für die Konsolenausgabe
 console_handler = logging.StreamHandler(sys.stdout)
 console_handler.setLevel(logging.INFO)
 console_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 console_handler.setFormatter(console_formatter)
 logger.addHandler(console_handler)
 
-# 3.2. FileHandler for log file with UTF-8 encoding
+# 3.2. FileHandler für die Log-Datei mit UTF-8-Kodierung
 file_handler = logging.FileHandler('JSONBuchEditor.log', encoding='utf-8')
 file_handler.setLevel(logging.INFO)
 file_handler.setFormatter(console_formatter)
 logger.addHandler(file_handler)
 
-# 4. Test log entry to verify logging setup
+# 4. Test-Log-Eintrag zur Überprüfung der Logger-Konfiguration
 logging.info("Logging configuration successfully set up.")
 
 class JSONLoaderWorker(QObject):
@@ -69,10 +71,10 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("JSON Book Editor")
         self.json_data = None
         self.current_page_index = 0
-        self.page_size = (800, 600)  # Default size
-        self.show_invisible_elements = False  # Default to not show invisible elements
+        self.page_size = (800, 600)  # Standardgröße
+        self.show_invisible_elements = False  # Standardmäßig unsichtbare Elemente nicht anzeigen
 
-        # Create actions with icons and connect them to methods
+        # Aktionen mit Icons erstellen und mit Methoden verbinden
         open_icon = QApplication.style().standardIcon(QStyle.SP_DialogOpenButton)
         save_icon = QApplication.style().standardIcon(QStyle.SP_DialogSaveButton)
         exit_icon = QApplication.style().standardIcon(QStyle.SP_DialogCloseButton)
@@ -107,7 +109,7 @@ class MainWindow(QMainWindow):
         delete_action.setShortcut(QKeySequence.Delete)
         delete_action.triggered.connect(self.delete_selected_elements)
 
-        # Create menu bar and add menus with actions
+        # Menüleiste erstellen und Menüs mit Aktionen hinzufügen
         menu = self.menuBar()
         file_menu = menu.addMenu('File')
         file_menu.addAction(open_action)
@@ -127,7 +129,7 @@ class MainWindow(QMainWindow):
         help_menu = menu.addMenu('Help')
         help_menu.addAction(about_action)
 
-        # Create toolbar and add actions
+        # Toolbar erstellen und Aktionen hinzufügen
         toolbar = QToolBar("Main Toolbar")
         self.addToolBar(toolbar)
         toolbar.addAction(open_action)
@@ -140,18 +142,18 @@ class MainWindow(QMainWindow):
         toolbar.addAction(new_image_action)
         toolbar.addSeparator()
         toolbar.addAction(settings_action)
-        toolbar.addAction(delete_action)  # Add Delete action to toolbar
+        toolbar.addAction(delete_action)  # Delete-Aktion zur Toolbar hinzufügen
 
-        # Show both icon and text in the toolbar
+        # Anzeigen sowohl von Icon als auch Text in der Toolbar
         toolbar.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
 
-        # Create main layout
+        # Hauptlayout erstellen
         main_widget = QWidget()
         main_layout = QVBoxLayout()
         main_widget.setLayout(main_layout)
         self.setCentralWidget(main_widget)
 
-        # Create navigation layout with previous and next buttons
+        # Navigationslayout mit vorherigen und nächsten Buttons erstellen
         navigation_layout = QHBoxLayout()
         self.previous_page_button = QPushButton("◀ Previous Page")
         self.previous_page_button.clicked.connect(self.previous_page)
@@ -164,18 +166,166 @@ class MainWindow(QMainWindow):
         navigation_layout.addWidget(self.next_page_button)
         navigation_layout.addStretch()
 
-        # Add navigation to main layout
+        # Datenbankmanager initialisieren
+        self.db_manager = DatabaseManager()
+
+        # Neue Menüpunkte für die Datenbank hinzufügen
+        self.add_database_menu()
+
+        # Navigation zum Hauptlayout hinzufügen
         main_layout.addLayout(navigation_layout)
 
-        # Create GraphicsView for displaying scenes
+        # QGraphicsView für die Anzeige der Szenen erstellen
         self.view = QGraphicsView()
         self.view.setRenderHint(QPainter.Antialiasing)
         main_layout.addWidget(self.view)
 
-        # Store the action for later access
+        # Aktion für das Anzeigen unsichtbarer Elemente speichern
         self.show_invisible_elements_action = show_invisible_elements_action
 
         logging.info("GUI initialized and MainWindow displayed.")
+
+    def add_database_menu(self):
+        menu = self.menuBar()
+        db_menu = menu.addMenu('Datenbank')  # Neues Menü
+
+        load_db_action = QAction('Laden aus Datenbank', self)
+        load_db_action.triggered.connect(self.load_from_database)
+        save_db_action = QAction('Speichern in Datenbank', self)
+        save_db_action.triggered.connect(self.save_to_database)
+        delete_db_action = QAction('Löschen aus Datenbank', self)
+        delete_db_action.triggered.connect(self.delete_from_database)
+        synchronize_action = QAction('Synchronisieren mit Datenbank', self)
+        synchronize_action.triggered.connect(self.synchronize_with_database)
+        settings_db_action = QAction('Datenbank-Einstellungen', self)
+        settings_db_action.triggered.connect(self.database_settings)
+
+        db_menu.addAction(load_db_action)
+        db_menu.addAction(save_db_action)
+        db_menu.addAction(delete_db_action)
+        db_menu.addAction(synchronize_action)  # Neuer Menüpunkt
+        db_menu.addSeparator()
+        db_menu.addAction(settings_db_action)
+
+    def database_settings(self):
+        dialog = DatabaseSettingsDialog(self.db_manager, self)
+        if dialog.exec_():
+            # Nach dem Speichern der Einstellungen neu verbinden
+            self.db_manager.connect()
+            QMessageBox.information(self, "Einstellungen gespeichert", "Datenbank-Einstellungen wurden aktualisiert.")
+
+    def load_from_database(self):
+        if self.db_manager.collection is None:
+            QMessageBox.critical(self, "Verbindungsfehler", "Keine Verbindung zur MongoDB. Bitte überprüfen Sie die Einstellungen.")
+            return
+
+        stories = self.db_manager.get_all_stories()
+        if not stories:
+            QMessageBox.information(self, "Keine Geschichten", "Es wurden keine Geschichten in der Datenbank gefunden.")
+            return
+
+        # Dialog zur Auswahl der Geschichte
+        story_titles = [story.get('title', f"Geschichte {i+1}") for i, story in enumerate(stories)]
+        story, ok = QInputDialog.getItem(self, "Geschichte auswählen", "Wählen Sie eine Geschichte zum Laden:", story_titles, 0, False)
+        if ok and story:
+            selected_story = next((s for s in stories if s.get('title') == story), None)
+            if selected_story:
+                self.json_data = selected_story
+                self.current_page_index = 0
+                # Lesen der Seitengröße
+                page_size = self.json_data.get('pageSize', {'width': 800, 'height': 600})
+                self.page_size = (page_size.get('width', 800), page_size.get('height', 600))
+                self.load_page()
+                self.update_page_info()
+                logging.info("Geschichte erfolgreich aus der Datenbank geladen.")
+                QMessageBox.information(self, "Erfolgreich geladen", f"Geschichte '{story}' wurde aus der Datenbank geladen.")
+            else:
+                QMessageBox.warning(self, "Nicht gefunden", "Die ausgewählte Geschichte wurde nicht gefunden.")
+
+    def save_to_database(self):
+        if not self.json_data:
+            QMessageBox.warning(self, "Keine Daten", "Keine Daten vorhanden, die gespeichert werden können.")
+            return
+
+        # JSON-Daten validieren, bevor gespeichert wird
+        if "title" not in self.json_data or not self.json_data.get("scenes"):
+            QMessageBox.critical(self, "Ungültige Daten", "Die Geschichte hat keinen Titel oder enthält keine Szenen.")
+            return
+
+        # Bestimmen, ob es sich um eine neue Geschichte handelt oder um eine Aktualisierung
+        if "_id" in self.json_data:
+            confirmation = QMessageBox.question(
+                self, 'Bestätigung', 
+                f"Möchten Sie die Geschichte '{self.json_data.get('title', 'Unbekannt')}' in der Datenbank aktualisieren?",
+                QMessageBox.Yes | QMessageBox.No, 
+                QMessageBox.No
+            )
+            if confirmation != QMessageBox.Yes:
+                return
+        else:
+            confirmation = QMessageBox.question(
+                self, 'Bestätigung', 
+                f"Möchten Sie die aktuelle Geschichte '{self.json_data.get('title', 'Unbekannt')}' in die Datenbank speichern?",
+                QMessageBox.Yes | QMessageBox.No, 
+                QMessageBox.No
+            )
+            if confirmation != QMessageBox.Yes:
+                return
+
+        success = self.db_manager.save_story(self.json_data)
+        if success:
+            QMessageBox.information(self, "Erfolgreich gespeichert", "Die Geschichte wurde erfolgreich in der Datenbank gespeichert.")
+        else:
+            QMessageBox.critical(self, "Speicherfehler", "Beim Speichern der Geschichte in der Datenbank ist ein Fehler aufgetreten.")
+
+
+    def delete_from_database(self):
+        if not self.json_data or "_id" not in self.json_data:
+            QMessageBox.warning(self, "Keine Daten", "Keine gespeicherte Geschichte vorhanden, die gelöscht werden kann.")
+            return
+
+        confirmation = QMessageBox.question(
+            self, 'Bestätigung', 
+            f"Möchten Sie die Geschichte '{self.json_data.get('title', 'Unbekannt')}' wirklich aus der Datenbank löschen?",
+            QMessageBox.Yes | QMessageBox.No, 
+            QMessageBox.No
+        )
+        if confirmation != QMessageBox.Yes:
+            return
+
+        story_id = self.json_data["_id"]
+        success = self.db_manager.delete_story(story_id)
+        if success:
+            QMessageBox.information(self, "Erfolgreich gelöscht", "Die Geschichte wurde erfolgreich aus der Datenbank gelöscht.")
+            self.json_data = None
+            self.view.setScene(None)
+            self.update_page_info()
+            logging.info(f"Geschichte mit ID {story_id} gelöscht.")
+        else:
+            QMessageBox.critical(self, "Löschfehler", "Beim Löschen der Geschichte aus der Datenbank ist ein Fehler aufgetreten.")
+
+    def synchronize_with_database(self):
+        if self.db_manager.collection is None:
+            QMessageBox.critical(self, "Verbindungsfehler", "Keine Verbindung zur MongoDB. Bitte überprüfen Sie die Einstellungen.")
+            return
+
+        confirmation = QMessageBox.question(
+            self, 'Synchronisation bestätigen', 
+            "Möchten Sie die aktuellen Daten mit der Datenbank synchronisieren? (Speichern Sie zuerst alle Änderungen)",
+            QMessageBox.Yes | QMessageBox.No, 
+            QMessageBox.No
+        )
+        if confirmation != QMessageBox.Yes:
+            return
+
+        # Speichern in die Datenbank
+        success = self.db_manager.save_story(self.json_data)
+        if success:
+            QMessageBox.information(self, "Erfolgreich synchronisiert", "Die Daten wurden erfolgreich mit der Datenbank synchronisiert.")
+            logging.info("Daten erfolgreich mit der Datenbank synchronisiert.")
+        else:
+            QMessageBox.critical(self, "Synchronisationsfehler", "Beim Synchronisieren der Daten mit der Datenbank ist ein Fehler aufgetreten.")
+            logging.error("Fehler beim Synchronisieren der Daten mit der Datenbank.")
 
     def toggle_show_invisible_elements(self, checked):
         self.show_invisible_elements = checked
@@ -202,16 +352,16 @@ class MainWindow(QMainWindow):
         file_path, _ = QFileDialog.getOpenFileName(
             self, "Open JSON File", "", "JSON Files (*.json);;All Files (*)")
         if file_path:
-            # Show loading dialog
+            # Lade-Dialog anzeigen
             self.loading_dialog = LoadingDialog(self)
             self.loading_dialog.show()
 
-            # Set up worker and thread
+            # Worker und Thread einrichten
             self.thread = QThread()
             self.worker = JSONLoaderWorker(file_path)
             self.worker.moveToThread(self.thread)
 
-            # Connect signals
+            # Signale verbinden
             self.thread.started.connect(self.worker.run)
             self.worker.finished.connect(self.on_json_loaded)
             self.worker.error.connect(self.on_json_load_error)
@@ -221,7 +371,7 @@ class MainWindow(QMainWindow):
             self.worker.error.connect(self.thread.quit)
             self.worker.error.connect(self.worker.deleteLater)
 
-            # Start thread
+            # Thread starten
             self.thread.start()
 
     def on_json_loaded(self, json_data):
@@ -234,7 +384,7 @@ class MainWindow(QMainWindow):
             self.update_page_info()
             return
         self.current_page_index = 0
-        # Read page size
+        # Seitengröße lesen
         page_size = self.json_data.get('pageSize', {'width': 800, 'height': 600})
         self.page_size = (page_size.get('width', 800), page_size.get('height', 600))
         self.load_page()
@@ -267,23 +417,21 @@ class MainWindow(QMainWindow):
             return
         total_pages = len(self.json_data.get('scenes', []))
         has_cover = bool(self.json_data.get('coverImage'))
-        if has_cover:
-            total_pages += 1
 
-        if self.current_page_index < 0 or self.current_page_index >= total_pages:
+        if self.current_page_index < 0 or self.current_page_index >= total_pages + (1 if has_cover else 0):
             QMessageBox.warning(self, "Range Error", "No more pages available.")
             return
 
-        # Update page size
+        # Seitengröße aktualisieren
         page_size = self.json_data.get('pageSize', {'width': 800, 'height': 600})
         self.page_size = (page_size.get('width', 800), page_size.get('height', 600))
 
         if has_cover and self.current_page_index == 0:
-            # Load cover page
+            # Cover-Seite laden
             cover_image_path = self.json_data.get('coverImage', '')
             scene = CoverSzene(cover_image_path, self.page_size, self.show_invisible_elements)
         else:
-            # Load scene page
+            # Szenen-Seite laden
             scene_index = self.current_page_index - (1 if has_cover else 0)
             scenes = self.json_data.get('scenes', [])
             if 0 <= scene_index < len(scenes):
@@ -294,7 +442,7 @@ class MainWindow(QMainWindow):
                 return
 
         self.view.setScene(scene)
-        self.view.setSceneRect(0, 0, self.page_size[0], self.page_size[1])  # Set scene size
+        self.view.setSceneRect(0, 0, self.page_size[0], self.page_size[1])  # Szenengröße setzen
         self.view.fitInView(scene.sceneRect(), Qt.KeepAspectRatio)
         self.update_page_info()
         logging.info(f"Page {self.current_page_index + 1} loaded.")
@@ -304,8 +452,7 @@ class MainWindow(QMainWindow):
             return
         total_pages = len(self.json_data.get('scenes', []))
         has_cover = bool(self.json_data.get('coverImage'))
-        if has_cover:
-            total_pages += 1
+        total_pages += 1 if has_cover else 0
         if self.current_page_index < total_pages - 1:
             self.current_page_index += 1
             self.load_page()
@@ -326,7 +473,7 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "No Data", "Please open a JSON file first.")
             return
         if self.view.scene() and isinstance(self.view.scene(), SeitenSzene):
-            # Create new text element
+            # Neues Textelement erstellen
             new_text_element = {
                 "content": "New Text",
                 "position": {"x": 100, "y": 100},
@@ -340,7 +487,7 @@ class MainWindow(QMainWindow):
                 "fontStyle": "normal",
                 "visible": True
             }
-            # Add to scene and JSON
+            # Zum JSON und zur Szene hinzufügen
             scene_index = self.current_page_index - (1 if self.json_data.get('coverImage') else 0)
             current_scene = self.json_data['scenes'][scene_index]
             current_scene.setdefault('textElements', []).append(new_text_element)
@@ -355,7 +502,7 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "No Data", "Please open a JSON file first.")
             return
         if self.view.scene() and isinstance(self.view.scene(), SeitenSzene):
-            # Select image file
+            # Bilddatei auswählen
             file_name, _ = QFileDialog.getOpenFileName(
                 self, "Select Image File", "", "Images (*.png *.jpg *.jpeg *.bmp);;All Files (*)")
             if file_name:
@@ -371,7 +518,7 @@ class MainWindow(QMainWindow):
                     "visible": True,
                     "userProvided": False
                 }
-                # Add to scene and JSON
+                # Zum JSON und zur Szene hinzufügen
                 scene_index = self.current_page_index - (1 if self.json_data.get('coverImage') else 0)
                 current_scene = self.json_data['scenes'][scene_index]
                 current_scene.setdefault('imageElements', []).append(new_image_element)
@@ -385,7 +532,7 @@ class MainWindow(QMainWindow):
         if not self.json_data:
             QMessageBox.warning(self, "No Data", "Please open a JSON file first or create a new one.")
             return
-        # Create new page
+        # Neue Seite erstellen
         new_scene = {
             "pageNumber": len(self.json_data['scenes']) + 1,
             "background": "",
@@ -409,7 +556,8 @@ class MainWindow(QMainWindow):
             reply = QMessageBox.question(
                 self, 'Delete Cover Image',
                 'Are you sure you want to remove the cover image?',
-                QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No
             )
             if reply == QMessageBox.Yes:
                 self.json_data['coverImage'] = ''
@@ -426,7 +574,8 @@ class MainWindow(QMainWindow):
         reply = QMessageBox.question(
             self, 'Delete Page',
             'Are you sure you want to delete the current page?',
-            QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
         )
         if reply == QMessageBox.Yes:
             scene_index = self.current_page_index - (1 if has_cover else 0)
@@ -444,14 +593,14 @@ class MainWindow(QMainWindow):
         dialog = EinstellungenDialog(self.json_data, self)
         if dialog.exec_():
             data = dialog.get_data()
-            # Update json_data
+            # JSON-Daten aktualisieren
             self.json_data['title'] = data['title']
             self.json_data['description'] = data['description']
             self.json_data['author'] = data.get('author', '')
             self.json_data['illustrator'] = data.get('illustrator', '')
             self.json_data['pageSize'] = data['pageSize']
             self.json_data['coverImage'] = data.get('coverImage', '')
-            # Update page size
+            # Seitengröße aktualisieren
             self.page_size = (data['pageSize']['width'], data['pageSize']['height'])
             self.load_page()
             QMessageBox.information(self, "Settings Saved", "Book settings have been updated.")
@@ -475,12 +624,25 @@ class MainWindow(QMainWindow):
                 for element in selected_elements:
                     if hasattr(element, 'text_element'):
                         element_name = element.text_element.get('content', 'Unknown')
+                        # Entfernen aus JSON-Daten
+                        scene_index = self.current_page_index - (1 if self.json_data.get('coverImage') else 0)
+                        current_scene = self.json_data['scenes'][scene_index]
+                        current_scene['textElements'] = [
+                            te for te in current_scene.get('textElements', []) if te != element.text_element
+                        ]
                     elif hasattr(element, 'image_element'):
                         element_name = element.image_element.get('imageUrl', 'Unknown')
+                        # Entfernen aus JSON-Daten
+                        scene_index = self.current_page_index - (1 if self.json_data.get('coverImage') else 0)
+                        current_scene = self.json_data['scenes'][scene_index]
+                        current_scene['imageElements'] = [
+                            ie for ie in current_scene.get('imageElements', []) if ie != element.image_element
+                        ]
                     else:
                         element_name = 'Unknown'
                     self.view.scene().removeItem(element)
                     logging.info(f"Element deleted: {element_name}")
+                QMessageBox.information(self, "Deleted", f"{len(selected_elements)} element(s) deleted successfully.")
         else:
             QMessageBox.information(self, "Info", "No elements selected for deletion.")
 
@@ -517,29 +679,29 @@ def combine_jpgs_vertically(jpg_files, output_path):
 
 def render_json_to_jpg(json_path, output_path):
     try:
-        # Initialize the Qt application
+        # Qt-Anwendung initialisieren
         app = QApplication(sys.argv)
         logging.info("Qt application initialized for headless mode.")
 
-        # Load JSON data
+        # JSON-Daten laden
         with open(json_path, 'r', encoding='utf-8') as f:
             json_data = json.load(f)
         logging.info(f"JSON data loaded from {json_path}")
 
-        # Validate JSON data
+        # JSON-Daten validieren
         if not validate_json(json_data):
             logging.error("Invalid JSON data. Process will terminate.")
             sys.exit(1)
 
-        # Determine if a cover is present
+        # Überprüfen, ob ein Cover vorhanden ist
         has_cover = bool(json_data.get('coverImage'))
         total_pages = len(json_data.get('scenes', [])) + (1 if has_cover else 0)
         logging.info(f"Total pages: {total_pages} (Cover: {has_cover})")
 
-        # Get page size from JSON or use default values
+        # Seitengröße aus JSON oder Standardwerte verwenden
         page_size = json_data.get('pageSize', {'width': 800, 'height': 600})
 
-        # Ensure width and height are integers
+        # Sicherstellen, dass Breite und Höhe Ganzzahlen sind
         try:
             page_width = int(page_size.get('width', 800))
             page_height = int(page_size.get('height', 600))
@@ -548,50 +710,50 @@ def render_json_to_jpg(json_path, output_path):
             logging.error(f"Invalid page resolution in JSON: {ve}")
             sys.exit(1)
 
-        # Use a local variable instead of 'self.page_size'
+        # Lokale Variable statt 'self.page_size' verwenden
         page_size_tuple = (page_width, page_height)
 
-        # List to store paths of generated JPGs
+        # Liste zur Speicherung der Pfade der generierten JPGs
         jpg_files = []
 
-        # Iterate through all pages
+        # Durch alle Seiten iterieren
         for index in range(total_pages):
             if has_cover and index == 0:
-                # Load cover page
+                # Cover-Seite laden
                 cover_image_path = json_data.get('coverImage', '')
                 scene = CoverSzene(cover_image_path, page_size_tuple, False)
                 logging.info(f"Loading cover page: {cover_image_path}")
             else:
-                # Load scene page
+                # Szenen-Seite laden
                 scene_index = index - 1 if has_cover else index
                 scene_data = json_data['scenes'][scene_index]
                 scene = SeitenSzene(scene_data, page_size_tuple, False)
                 logging.info(f"Loading scene page {scene_index + 1}")
 
-            # Create a QImage and QPainter to render
+            # QImage und QPainter zum Rendern erstellen
             image = QImage(page_width, page_height, QImage.Format_ARGB32)
-            image.fill(Qt.white)  # Set background color
+            image.fill(Qt.white)  # Hintergrundfarbe setzen
 
             painter = QPainter(image)
             scene.render(painter)
             painter.end()
 
-            # Save the image as JPG
+            # Bild als JPG speichern
             jpg_filename = f"page_{index + 1}.jpg"
             image.save(jpg_filename, "JPG")
             jpg_files.append(jpg_filename)
             logging.info(f"Generated {jpg_filename}")
 
-        # Combine all JPGs vertically
+        # Alle JPGs vertikal kombinieren
         combined_image = combine_jpgs_vertically(jpg_files, output_path)
         logging.info(f"Combined image saved as {output_path}")
 
-        # Delete temporary JPGs
+        # Temporäre JPGs löschen
         for jpg in jpg_files:
             os.remove(jpg)
             logging.info(f"Temporary file deleted: {jpg}")
 
-        # Exit the Qt application
+        # Qt-Anwendung beenden
         sys.exit()
     except Exception as e:
         logging.exception("Error in headless mode:")
@@ -605,7 +767,7 @@ def validate_json(json_data):
             logging.error(f"Missing required field in JSON: {field}")
             return False
 
-    # Additional validations can be added here
+    # Weitere Validierungen können hier hinzugefügt werden
     return True
 
 
@@ -624,11 +786,11 @@ def main():
         render_json_to_jpg(args.json_file, args.output)
     else:
         try:
-            # Start GUI mode
+            # GUI-Modus starten
             app = QApplication(sys.argv)
             app.setStyle("Fusion")
 
-            # Optional: Load stylesheet
+            # Optional: Stylesheet laden
             stylesheet = """
             QMainWindow {
                 background-color: #f0f0f0;
