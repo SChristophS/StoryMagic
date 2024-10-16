@@ -148,7 +148,7 @@ echo ===============================================
 echo.
 
 REM Run PyInstaller to create a one-file executable
-pyinstaller --onefile --name "%OUTPUT_NAME%" "%MAIN_SCRIPT%" >> buildlog.txt 2>&1
+pyinstaller --onefile --noconsole --name "%OUTPUT_NAME%" "%MAIN_SCRIPT%" >> buildlog.txt 2>&1
 
 REM Check if PyInstaller succeeded
 if ERRORLEVEL 1 (
